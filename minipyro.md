@@ -44,7 +44,7 @@ register_backend('minipyro', {
  * Inside `__call__(data)`, M-64, calls `guide(data)` to be returned as `guide_trace`.
  * Inside `guide(data)`, M-32 of examples/minipyro,py, we have a call to `sample("loc", dist.Normal(guide_loc, guide_scale))`.
  * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-187: nothing happens, as there is no `obs`.
- * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-204: there is a call to `apply_stack(initial_msg)`.  See *M-204*.  `initial_msg` in M-204 gets a random value from `dist.Normal(guide_loc, guide_scale)()`, and `foo_gt.trace["loc"]` gets set to `initial_msg`.
+ * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-204: there is a call to `apply_stack(initial_msg)`.  See *M-331::M-204*.  `initial_msg` in M-204 gets a random value from `dist.Normal(guide_loc, guide_scale)()`, and `foo_gt.trace["loc"]` gets set to `initial_msg`.
  * Done with `apply_stack(initial_msg)` and the result is called `msg`.
  * Done with `sample("loc", dist.Normal(guide_loc, guide_scale))`, return `msg["value"]` but it's not stored.
  * Done with `guide(data)`, no return.
@@ -69,7 +69,7 @@ Note that `guide_trace` has the value
 }
 ```
 
-**M-204**: `apply_stack(initial_msg)`
+**M-331::M-204**: `apply_stack(initial_msg)`
 
 Note that `initial_msg` has the values
 ```
