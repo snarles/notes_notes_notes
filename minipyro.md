@@ -68,7 +68,7 @@ Note that `guide_trace` has the value
 
 **M-331:E-30-32**
 
- * E-30: we have a call to `param("guide_loc", torch.tensor(0.0))`.  This creates a msg with value `{"type": "param", "name": "guide_loc", "fn": <the fn method in param>, "args": (torch.tensor(0.0), torch.distributions.constraints.real), "value": None}`.  This message gets stored in `param_capture["guide_loc"]`, and the `fn` of the msg gets called resulting in `PARAM_STORE["guide_loc"] = (torch.tensor(0.0), torch.distributions.constraints.real)`.
+ * E-30: we have a call to `param("guide_loc", torch.tensor(0.0))`.  This creates a msg (we nickname it `foo_msg_gl`) with value `{"type": "param", "name": "guide_loc", "fn": <the fn method in param>, "args": (torch.tensor(0.0), torch.distributions.constraints.real), "value": None}`.  Processing does nothing,  the `fn` of the msg gets called resulting in `PARAM_STORE["guide_loc"] = (torch.tensor(0.0), torch.distributions.constraints.real)` and `foo_msg_gl["value"] = torch.tensor(0.0)`, and then in postprocessing the message gets stored in `param_capture["guide_loc"]`.
  * E-31: similar to E-30...
  * E-32: we have a call to `sample("loc", dist.Normal(guide_loc, guide_scale))`.
  * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-187: nothing happens, as there is no `obs`.
