@@ -102,12 +102,43 @@ Note that `initial_msg` has the values
  * `trace(foo_replay)` is called.  A `trace` object is created, we will call it `foo_rt`.  We have `foo_rt.fn` equals `foo_replay`.
  * A call to `get_trace(data)` causes `foo_rt` to be put on the stack - `PYRO_STACK==[param_capture, foo_block, foo_rt]` and `foo_replay(data)` to be called.
  * `foo_replay(data)` causes `foo_replay` to be put on the stack - `PYRO_STACK==[param_capture, foo_block, foo_rt, foo_replay]` and `model(data)` to be called.
- * `model(data)`: see *M-338:E-22-23*
+ * `model(data)`: see *M-338:E-22-23*.  The object that will be called `model_trace` gets `model_trace["loc"]` set to a message with `["value"]` equal to a random sample from `dist.Normal(0.0, 1.0)`, and `model_trace["obs"]` set to a message that includes items `("name": "obs", "fn": dist.Normal(loc, 1.0).expand(100), "value": data)`.
  * `model_trace` is initialized to `foo_rt.trace`.
  * `foo_replay` removed from stack.
  * `foo_rt` removed from stack.
 
-**M-338::E-22-23**
+`model_trace` has the value
+```
+{
+    "loc":
+        {
+            "type": "sample",
+            "name": "loc",
+            "fn": dist.Normal(0.0, 1.0),
+            "args": None,
+            "kwargs": None,
+            "value": [some random value],
+        }
+    "obs":
+        {
+            "type": "sample",
+            "name": "obs",
+            "fn": dist.Normal(0.0, 1.0).expand(100),
+            "args": None,
+            "kwargs": None,
+            "value": data,
+        }
+}
+```
+
+**M-338::E-23-25**
+
+ * E-23: The object that will be called `model_trace` gets `model_trace["loc"]` set to a message with `["value"]` equal to a random sample from `dist.Normal(0.0, 1.0)`.
+ * E-24: Let's call this object `foo_plate`, and we have `foo_plate = PlateMessenger(fn=None, size=100, dim=-1)`.  Add it to the stack.
+ * E-25: The call to `pyro.sample("obs", dist.Normal(loc, 1.0), obs=data)` creates an `initial_msg` that includes items `("name": "obs", "fn": dist.Normal(loc, 1.0), "value": data)`.
+ * E-25::M-204: The call `apply_stack(initial_msg)` causes `foo_plate.process_message(initial_msg)`, which has the effect of assigning `initial_msg["fn"] = dist.Normal(loc, 1.0).expand(100)`.
+ * The object that will be called `model_trace` gets `model_trace["obs"]` set to `initial_msg` that includes items `("name": "obs", "fn": dist.Normal(loc, 1.0).expand(100), "value": data)`.
+ * end of E-25: remove `foo_plate` from the stack.
 
 
 **M-309**: 
