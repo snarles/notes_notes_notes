@@ -49,7 +49,7 @@ register_backend('minipyro', {
  * Done with `apply_stack(initial_msg)` and the result is called `msg`.
  * Done with `sample("loc", dist.Normal(guide_loc, guide_scale))`, return `msg["value"]` but it's not stored.
  * Done with `guide(data)`, no return.
- * Done with `with self:` the `__exit__` method of `foo_gt` is called.
+ * Done with `with self:` the `__exit__` method of `foo_gt` is called.  `PYRO_STACK==[param_capture, foo_block]`.
  * Done with `__call__(data)`, returns `None` since `guide` has no return.
  * Done with `get_trace(data)`, now `guide_trace` is `foo_gt.trace`.
  * Right now, `PYRO_STACK`
@@ -93,6 +93,21 @@ Note that `initial_msg` has the values
  * Loop: `handler`=`foo_block`: pass
  * Loop: `handler`=`foo_gt`: set `foo_gt.trace["loc"]` to `initial_msg`
  * Returns `initial_msg`.
+
+**M-338**: `model_trace = trace(replay(model, guide_trace)).get_trace(data)`
+
+ * A `replay` object is created, we will call it `foo_replay`.
+ * M-96 `foo_replay.guide_trace` is set to `guide_trace`
+ * M-97 `foo_replay.fn` is set to `model`.
+ * `trace(foo_replay)` is called.  A `trace` object is created, we will call it `foo_rt`.  We have `foo_rt.fn` equals `foo_replay`.
+ * A call to `get_trace(data)` causes `foo_rt` to be put on the stack - `PYRO_STACK==[param_capture, foo_block, foo_rt]` and `foo_replay(data)` to be called.
+ * `foo_replay(data)` causes `foo_replay` to be put on the stack - `PYRO_STACK==[param_capture, foo_block, foo_rt, foo_replay]` and `model(data)` to be called.
+ * `model(data)`: see *M-338:E-22-23*
+ * `model_trace` is initialized to `foo_rt.trace`.
+ * `foo_replay` removed from stack.
+ * `foo_rt` removed from stack.
+
+**M-338::E-22-23**
 
 
 **M-309**: 
