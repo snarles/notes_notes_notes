@@ -44,7 +44,7 @@ register_backend('minipyro', {
  * Inside `__call__(data)`, M-64, calls `guide(data)` to be returned as `guide_trace`.
  * Inside `guide(data)`, M-32 of examples/minipyro,py, we have a call to `sample("loc", dist.Normal(guide_loc, guide_scale))`.
  * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-187: nothing happens, as there is no `obs`.
- * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-204: there is a call to `apply_stack(initial_msg)`.  See *M204*
+ * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-204: there is a call to `apply_stack(initial_msg)`.  See *M-204*.  `initial_msg` in M-204 gets a random value from `dist.Normal(guide_loc, guide_scale)()`, and `foo_gt.trace["loc"]` gets set to `initial_msg`.
  * Done with `apply_stack(initial_msg)` and the result is called `msg`.
  * Done with `sample("loc", dist.Normal(guide_loc, guide_scale))`, return `msg["value"]` but it's not stored.
  * Done with `guide(data)`, no return.
@@ -53,11 +53,27 @@ register_backend('minipyro', {
  * Done with `get_trace(data)`, now `guide_trace` is `foo_gt.trace`.
  * Right now, `PYRO_STACK`
 
+Note that `guide_trace` has the value
+```
+{
+    "loc":
+        {
+            "type": "sample",
+            "name": "loc",
+            "fn": dist.Normal(guide_loc, guide_scale),
+            "args": None,
+            "kwargs": None,
+            "value": [some random value],
+            "stop": True
+        }   
+}
+```
+
 **M-204**: `apply_stack(initial_msg)`
 
-Note that
+Note that `initial_msg` has the values
 ```
-    initial_msg = {
+    {
         "type": "sample",
         "name": "loc",
         "fn": dist.Normal(guide_loc, guide_scale),
@@ -68,10 +84,15 @@ Note that
 ```
 
  * M-167: `(pointer, handler)` are going to be `(0, foo_gt)`, `(1, foo_block)`, `(2, param_capture)`.
- * Loop: `pointer`=`0`, `handler`=`foo_gt`.
- * 
- * Loop: `pointer`=`1`, `handler`=`foo_block`.
- * Loop: `pointer`=`2`, `handler`=`param_capture`.
+ * Loop: `pointer`=`0`, `handler`=`foo_gt`.  pass
+ * Loop: `pointer`=`1`, `handler`=`foo_block`.  Since `initial_msg["type"]` is `"sample"`, `foo_block.hide_fn(initial_msg)` evaluates to `True`.  Hence, `initial_msg["stop"]` gets set to `True`.
+ * M-171: Since `initial_msg["stop"]` is `True`, we break out of the `for` loop.
+ * M-174: `dist.Normal(guide_loc, guide_scale)()` is called, sampling a normal random variate and storing that to `initial_msg["value"]`.
+ * M-179: the for statement evaluates to `for handler in PYRO_STACK[-2:]:` and hence it will loop over `foo_block` and `foo_gt`.
+ * Loop: `handler`=`foo_block`: pass
+ * Loop: `handler`=`foo_gt`: set `foo_gt.trace["loc"]` to `initial_msg`
+ * Returns `initial_msg`.
+
 
 **M-309**: 
 
