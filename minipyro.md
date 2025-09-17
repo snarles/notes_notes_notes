@@ -43,11 +43,7 @@ register_backend('minipyro', {
  * A call to `get_trace(data)` causes `foo_gt` to pass `data` as an argument to `__call__`.
  * Inside `__call__(data)`, M-63 `with self:` causes the `__enter__` method of `foo_gt` to be called.  At this point, then `PYRO_STACK==[param_capture, foo_block, foo_gt]`.
  * Inside `__call__(data)`, M-64, calls `guide(data)` to be returned as `guide_trace`.
- * Inside `guide(data)`, M-32 of examples/minipyro,py, we have a call to `sample("loc", dist.Normal(guide_loc, guide_scale))`.
- * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-187: nothing happens, as there is no `obs`.
- * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-204: there is a call to `apply_stack(initial_msg)`.  See *M-331::M-204*.  `initial_msg` in M-204 gets a random value from `dist.Normal(guide_loc, guide_scale)()`, and `foo_gt.trace["loc"]` gets set to `initial_msg`.
- * Done with `apply_stack(initial_msg)` and the result is called `msg`.
- * Done with `sample("loc", dist.Normal(guide_loc, guide_scale))`, return `msg["value"]` but it's not stored.
+ * Inside `guide(data)`, see *M-331::E-30-32*, 
  * Done with `guide(data)`, no return.
  * Done with `with self:` the `__exit__` method of `foo_gt` is called.  `PYRO_STACK==[param_capture, foo_block]`.
  * Done with `__call__(data)`, returns `None` since `guide` has no return.
@@ -64,13 +60,23 @@ Note that `guide_trace` has the value
             "fn": dist.Normal(guide_loc, guide_scale),
             "args": None,
             "kwargs": None,
-            "value": [some random value],
+            "value": <some random value>,
             "stop": True
         }   
 }
 ```
 
-**M-331::M-204**: `apply_stack(initial_msg)`
+**M-331:E-30-32**
+
+ * E-30: we have a call to `param("guide_loc", torch.tensor(0.0))`.  This creates a msg with value `{"type": "param", "name": "guide_loc", "fn": <the fn method in param>, "args": (torch.tensor(0.0), torch.distributions.constraints.real), "value": None}`.  This message gets stored in `param_capture["guide_loc"]`, and the `fn` of the msg gets called resulting in `PARAM_STORE["guide_loc"] = (torch.tensor(0.0), torch.distributions.constraints.real)`.
+ * E-31: similar to E-30...
+ * E-32: we have a call to `sample("loc", dist.Normal(guide_loc, guide_scale))`.
+ * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-187: nothing happens, as there is no `obs`.
+ * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-204: there is a call to `apply_stack(initial_msg)`.  See *M-331::E-32::M-204*.  `initial_msg` in M-204 gets a random value from `dist.Normal(guide_loc, guide_scale)()`, and `foo_gt.trace["loc"]` gets set to `initial_msg`.
+ * Done with `apply_stack(initial_msg)` and the result is called `msg`.
+ * Done with `sample("loc", dist.Normal(guide_loc, guide_scale))`, return `msg["value"]` but it's not stored.
+
+**M-331::E-32::M-204**: `apply_stack(initial_msg)`
 
 Note that `initial_msg` has the values
 ```
@@ -117,7 +123,7 @@ Note that `initial_msg` has the values
             "fn": dist.Normal(0.0, 1.0),
             "args": None,
             "kwargs": None,
-            "value": [some random value],
+            "value": <some random value>,
         }
     "obs":
         {
