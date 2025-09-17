@@ -35,8 +35,9 @@ register_backend('minipyro', {
 
 **M-308**: `block` is called which places a `block` `Messenger` object with `hide_fn` that blocks messages of type `"sample"`, let's call it `foo_block`.  We won't be able to see this working until `apply_stack` gets called inside line 309.
 
+*M-331 - M-354*: `elbo(model, guide, data)`
 
-**M-331**: `elbo(model, guide, data)`
+**M-331**: `guide_trace = trace(guide).get_trace(data)`
 
  * A `trace` object is constructed with `fn=guide`.  For our purposes, name it as `foo_gt`.
  * A call to `get_trace(data)` causes `foo_gt` to pass `data` as an argument to `__call__`.
