@@ -108,7 +108,7 @@ Note that `initial_msg` has the values
  * `trace(foo_replay)` is called.  A `trace` object is created, we will call it `foo_rt`.  We have `foo_rt.fn` equals `foo_replay`.
  * A call to `get_trace(data)` causes `foo_rt` to be put on the stack - `PYRO_STACK==[param_capture, foo_block, foo_rt]` and `foo_replay(data)` to be called.
  * `foo_replay(data)` causes `foo_replay` to be put on the stack - `PYRO_STACK==[param_capture, foo_block, foo_rt, foo_replay]` and `model(data)` to be called.
- * `model(data)`: see *M-338:E-22-23*.  Due to `foo_replay` processing the `initial_msg` sent by`sample("loc", dist.Normal(0.0, 1.0))`, the object that will be called `model_trace` gets `model_trace["loc"]` set to a message with `["value"]` equal to `foo_gloc`, and `model_trace["obs"]` set to a message that includes items `("name": "obs", "fn": dist.Normal(loc, 1.0).expand(100), "value": data)`.
+ * `model(data)`: see *M-338:E-22-23*.  Due to `foo_replay` processing the `initial_msg` sent by`sample("loc", dist.Normal(0.0, 1.0))`, the object that will be called `model_trace` gets `model_trace["loc"]` set to a message with `["value"]` equal to `foo_gloc`, and `model_trace["obs"]` set to a message that includes items `("name": "obs", "fn": dist.Normal(foo_gloc, 1.0).expand(100), "value": data)`.
  * `model_trace` is initialized to `foo_rt.trace`.
  * `foo_replay` removed from stack.
  * `foo_rt` removed from stack.
@@ -129,7 +129,7 @@ Note that `initial_msg` has the values
         {
             "type": "sample",
             "name": "obs",
-            "fn": dist.Normal(0.0, 1.0).expand(100),
+            "fn": dist.Normal(foo_gloc, 1.0).expand(100),
             "args": None,
             "kwargs": None,
             "value": data,
