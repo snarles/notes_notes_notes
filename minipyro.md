@@ -60,19 +60,19 @@ Note that `guide_trace` has the value
             "fn": dist.Normal(guide_loc, guide_scale),
             "args": None,
             "kwargs": None,
-            "value": <some random value>,
+            "value": foo_gloc,
             "stop": True
         }   
 }
 ```
 
-**M-331:E-30-32**
+**M-331::E-30-32**
 
  * E-30: we have a call to `param("guide_loc", torch.tensor(0.0))`.  This creates a msg (we nickname it `foo_msg_gl`) with value `{"type": "param", "name": "guide_loc", "fn": <the fn method in param>, "args": (torch.tensor(0.0), torch.distributions.constraints.real), "value": None}`.  Processing does nothing,  the `fn` of the msg gets called resulting in `PARAM_STORE["guide_loc"] = (torch.tensor(0.0), torch.distributions.constraints.real)` and `foo_msg_gl["value"] = torch.tensor(0.0)`, and then in postprocessing the message gets stored in `param_capture["guide_loc"]`.
  * E-31: similar to E-30...
  * E-32: we have a call to `sample("loc", dist.Normal(guide_loc, guide_scale))`.
  * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-187: nothing happens, as there is no `obs`.
- * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-204: there is a call to `apply_stack(initial_msg)`.  See *M-331::E-32::M-204*.  `initial_msg` in M-204 gets a random value from `dist.Normal(guide_loc, guide_scale)()`, and `foo_gt.trace["loc"]` gets set to `initial_msg`.
+ * Inside `sample("loc", dist.Normal(guide_loc, guide_scale))`, M-204: there is a call to `apply_stack(initial_msg)`.  See *M-331::E-32::M-204*.  `initial_msg` in M-204 gets a random value `foo_gloc` from `dist.Normal(guide_loc, guide_scale)()`, and `foo_gt.trace["loc"]` gets set to `initial_msg`.
  * Done with `apply_stack(initial_msg)` and the result is called `msg`.
  * Done with `sample("loc", dist.Normal(guide_loc, guide_scale))`, return `msg["value"]` but it's not stored.
 
@@ -94,7 +94,7 @@ Note that `initial_msg` has the values
  * Loop: `pointer`=`0`, `handler`=`foo_gt`.  pass
  * Loop: `pointer`=`1`, `handler`=`foo_block`.  Since `initial_msg["type"]` is `"sample"`, `foo_block.hide_fn(initial_msg)` evaluates to `True`.  Hence, `initial_msg["stop"]` gets set to `True`.
  * M-171: Since `initial_msg["stop"]` is `True`, we break out of the `for` loop.
- * M-174: `dist.Normal(guide_loc, guide_scale)()` is called, sampling a normal random variate and storing that to `initial_msg["value"]`.
+ * M-174: `dist.Normal(guide_loc, guide_scale)()` is called, sampling a normal random variate (let's nickname it `foo_gloc`) and storing that to `initial_msg["value"]`.
  * M-179: the for statement evaluates to `for handler in PYRO_STACK[-2:]:` and hence it will loop over `foo_block` and `foo_gt`.
  * Loop: `handler`=`foo_block`: pass
  * Loop: `handler`=`foo_gt`: set `foo_gt.trace["loc"]` to `initial_msg`
@@ -108,7 +108,7 @@ Note that `initial_msg` has the values
  * `trace(foo_replay)` is called.  A `trace` object is created, we will call it `foo_rt`.  We have `foo_rt.fn` equals `foo_replay`.
  * A call to `get_trace(data)` causes `foo_rt` to be put on the stack - `PYRO_STACK==[param_capture, foo_block, foo_rt]` and `foo_replay(data)` to be called.
  * `foo_replay(data)` causes `foo_replay` to be put on the stack - `PYRO_STACK==[param_capture, foo_block, foo_rt, foo_replay]` and `model(data)` to be called.
- * `model(data)`: see *M-338:E-22-23*.  The object that will be called `model_trace` gets `model_trace["loc"]` set to a message with `["value"]` equal to a random sample from `dist.Normal(0.0, 1.0)`, and `model_trace["obs"]` set to a message that includes items `("name": "obs", "fn": dist.Normal(loc, 1.0).expand(100), "value": data)`.
+ * `model(data)`: see *M-338:E-22-23*.  Due to `foo_replay` processing the `initial_msg` sent by`sample("loc", dist.Normal(0.0, 1.0))`, the object that will be called `model_trace` gets `model_trace["loc"]` set to a message with `["value"]` equal to `foo_gloc`, and `model_trace["obs"]` set to a message that includes items `("name": "obs", "fn": dist.Normal(loc, 1.0).expand(100), "value": data)`.
  * `model_trace` is initialized to `foo_rt.trace`.
  * `foo_replay` removed from stack.
  * `foo_rt` removed from stack.
@@ -123,7 +123,7 @@ Note that `initial_msg` has the values
             "fn": dist.Normal(0.0, 1.0),
             "args": None,
             "kwargs": None,
-            "value": <some random value>,
+            "value": foo_gloc,
         }
     "obs":
         {
